@@ -14,7 +14,7 @@ enum EchoMessage {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct EchoNode {
-    id: usize,
+    msg_id: usize,
 }
 
 impl rustgen::Node<EchoMessage> for EchoNode {
@@ -22,7 +22,7 @@ impl rustgen::Node<EchoMessage> for EchoNode {
     where
         Self: Sized,
     {
-        Ok(Self { id: 1 })
+        Ok(Self { msg_id: 1 })
     }
 
     fn step(
@@ -30,7 +30,7 @@ impl rustgen::Node<EchoMessage> for EchoNode {
         req: rustgen::Message<EchoMessage>,
         output: &mut std::io::StdoutLock,
     ) -> anyhow::Result<()> {
-        let mut msg = req.into_reply(Some(&mut self.id));
+        let mut msg = req.into_reply(Some(&mut self.msg_id));
         match msg.body.payload {
             EchoMessage::Echo { echo } => {
                 msg.body.payload = EchoMessage::EchoOk { echo };
