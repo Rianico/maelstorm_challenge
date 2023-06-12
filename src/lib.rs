@@ -85,16 +85,6 @@ where
     MessageType: DeserializeOwned,
     N: Node<MessageType>,
 {
-    // let mut stdin = std::io::stdin().lines();
-    // let init_msg: Message<InitMsg> = serde_json::from_str(
-    //     &stdin
-    //         .next()
-    //         .expect("no init message")
-    //         .context("failed to read init msg from stdin")?,
-    // )?;
-    // let InitMsg::Init ( ref init_body ) = init_msg.body.payload else {
-    //     panic!("first message should be init.");
-    // };
     let mut stdin = BufReader::new(std::io::stdin().lock());
     let init_msg = serde_json::Deserializer::from_reader(&mut stdin)
         .into_iter::<Message<InitMsg>>()
