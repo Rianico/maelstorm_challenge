@@ -1,8 +1,6 @@
 use std::{
     fmt::Debug,
     io::{stdout, BufReader, Write},
-    sync::mpsc,
-    thread,
 };
 
 use anyhow::Context;
@@ -16,7 +14,7 @@ pub struct Message<MessageType> {
     pub body: Body<MessageType>,
 }
 
-impl<M> Message<M> {
+impl<M: Serialize> Message<M> {
     pub fn into_reply(self, msg_id: Option<&mut usize>) -> Self {
         Self {
             src: self.dst,
@@ -31,6 +29,12 @@ impl<M> Message<M> {
                 in_reply_to: self.body.id,
             },
         }
+    }
+
+    pub fn send(&self, output: &mut impl Write) -> anyhow::Result<()> {
+        serde_json::to_writer(&mut *output, &self)
+            .context("serde to broadcast_ok message filed")?;
+        output.write_all(b"\n").context("flush message error")
     }
 }
 
@@ -106,13 +110,13 @@ where
         stdout.write_all(b"\n")?;
     }
 
-    let (tx, rx) = mpsc::channel();
+    let (tx, rx) = std::sync::mpsc::channel();
 
     let mut node: N = Node::init_from(init_body, tx.clone())
         .context("construct node from init message failed")
         .expect("Fail to construct the node from init msg");
 
-    let jh = thread::spawn(move || {
+    let jh = std::thread::spawn(move || {
         let mut stdout = stdout().lock();
         for msg in rx {
             node.step(msg, &mut stdout).expect("step msg error");
