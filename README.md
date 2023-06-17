@@ -3,8 +3,8 @@ learn through [maelstorm](https://fly.io/dist-sys/).
 
 # RoadMap
 - [x] finish [Challenge #1: Echo](https://fly.io/dist-sys/1/)
-- [ ] finish [Challenge #2: Unique ID Generation](https://fly.io/dist-sys/2/)
-- [ ] finish [Challenge #3a: Single-Node Broadcast](https://fly.io/dist-sys/3a/)
+- [x] finish [Challenge #2: Unique ID Generation](https://fly.io/dist-sys/2/)
+- [x] finish [Challenge #3a: Single-Node Broadcast](https://fly.io/dist-sys/3a/)
 - [ ] finish [Challenge #3b: Multi-Node Broadcast](https://fly.io/dist-sys/3b/)
 - [ ] finish [Challenge #3c: Fault Tolerant Broadcast](https://fly.io/dist-sys/3c/)
 - [ ] finish [Challenge #3d: Efficient Broadcast, Part I](https://fly.io/dist-sys/3c/)
