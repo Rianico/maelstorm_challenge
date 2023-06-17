@@ -1,4 +1,7 @@
-use std::{collections::HashMap, io::Write};
+use std::{
+    collections::{HashMap, HashSet},
+    io::Write,
+};
 
 use anyhow::Context;
 use rustgen::main_loop;
@@ -14,7 +17,7 @@ pub enum BroadcastMessage {
     BroadcastOk,
     Read,
     ReadOk {
-        messages: Vec<usize>,
+        messages: HashSet<usize>,
     },
     Topology {
         topology: HashMap<String, Vec<usize>>,
@@ -26,7 +29,7 @@ pub enum BroadcastMessage {
 struct BroadcastNode {
     id: String,
     msg_id: usize,
-    messages: Vec<usize>,
+    messages: HashSet<usize>,
 }
 
 impl rustgen::Node<BroadcastMessage> for BroadcastNode {
@@ -37,18 +40,18 @@ impl rustgen::Node<BroadcastMessage> for BroadcastNode {
         Ok(Self {
             id: init_msg.node_id.clone(),
             msg_id: 1,
-            messages: Vec::new(),
+            messages: HashSet::new(),
         })
     }
 
     fn step(
         &mut self,
         req: rustgen::Message<BroadcastMessage>,
-        output: &mut std::io::StdoutLock,
+        output: &mut impl Write,
     ) -> anyhow::Result<()> {
         match req.body.payload {
             BroadcastMessage::Broadcast { message } => {
-                self.messages.push(message);
+                self.messages.insert(message);
                 let mut reply = req.into_reply(Some(&mut self.msg_id));
                 reply.body.payload = BroadcastMessage::BroadcastOk;
                 serde_json::to_writer(&mut *output, &reply)
@@ -60,7 +63,6 @@ impl rustgen::Node<BroadcastMessage> for BroadcastNode {
                 reply.body.payload = BroadcastMessage::ReadOk {
                     messages: self.messages.clone(),
                 };
-                self.messages.clear();
                 serde_json::to_writer(&mut *output, &reply)
                     .context("serde to broadcast_ok message filed")?;
                 output.write_all(b"\n")?;
@@ -72,7 +74,9 @@ impl rustgen::Node<BroadcastMessage> for BroadcastNode {
                     .context("serde to broadcast_ok message filed")?;
                 output.write_all(b"\n")?;
             }
-            _ => {}
+            BroadcastMessage::TopologyOk
+            | BroadcastMessage::BroadcastOk
+            | BroadcastMessage::ReadOk { .. } => {}
         }
         Ok(())
     }

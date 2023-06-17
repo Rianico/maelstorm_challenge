@@ -28,7 +28,7 @@ impl rustgen::Node<EchoMessage> for EchoNode {
     fn step(
         &mut self,
         req: rustgen::Message<EchoMessage>,
-        output: &mut std::io::StdoutLock,
+        output: &mut impl Write,
     ) -> anyhow::Result<()> {
         let mut msg = req.into_reply(Some(&mut self.msg_id));
         match msg.body.payload {

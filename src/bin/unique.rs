@@ -35,7 +35,7 @@ impl rustgen::Node<Generation> for UniqueNode {
     fn step(
         &mut self,
         req: rustgen::Message<Generation>,
-        output: &mut std::io::StdoutLock,
+        output: &mut impl Write,
     ) -> anyhow::Result<()> {
         let mut msg = req.into_reply(Some(&mut self.msg_id));
         match msg.body.payload {

@@ -1,6 +1,8 @@
 use std::{
     fmt::Debug,
-    io::{stdout, BufReader, StdoutLock, Write},
+    io::{stdout, BufReader, Write},
+    sync::mpsc,
+    thread,
 };
 
 use anyhow::Context;
@@ -77,13 +79,13 @@ pub trait Node<MessageType> {
     where
         Self: Sized;
 
-    fn step(&mut self, req: Message<MessageType>, output: &mut StdoutLock) -> anyhow::Result<()>;
+    fn step(&mut self, req: Message<MessageType>, output: &mut impl Write) -> anyhow::Result<()>;
 }
 
 pub fn main_loop<MessageType, N>() -> anyhow::Result<()>
 where
-    MessageType: DeserializeOwned,
-    N: Node<MessageType>,
+    MessageType: DeserializeOwned + Send + 'static,
+    N: Node<MessageType> + Send + 'static,
 {
     let mut stdin = BufReader::new(std::io::stdin().lock());
     let init_msg = serde_json::Deserializer::from_reader(&mut stdin)
@@ -95,19 +97,35 @@ where
         panic!("first message should be init.");
     };
 
-    let mut stdout = stdout().lock();
-    serde_json::to_writer(&mut stdout, &init_msg.into_init_ok()?)?;
-    stdout.write_all(b"\n")?;
+    {
+        let mut stdout = stdout().lock();
+        serde_json::to_writer(&mut stdout, &init_msg.into_init_ok()?)?;
+        stdout.write_all(b"\n")?;
+    }
 
-    let mut node: N =
-        Node::init_from(init_body).context("construct node from init message failed")?;
+    let (tx, rx) = mpsc::channel();
+
+    let mut node: N = Node::init_from(init_body)
+        .context("construct node from init message failed")
+        .expect("Fail to construct the node from init msg");
+
+    let jh = thread::spawn(move || {
+        let mut stdout = stdout().lock();
+        for msg in rx {
+            node.step(msg, &mut stdout).expect("step msg error");
+        }
+    });
+
     let stdin =
         serde_json::Deserializer::from_reader(&mut stdin).into_iter::<Message<MessageType>>();
     for line in stdin {
         let msg = line.context("Maelstrom input from STDIN could not be read")?;
-        node.step(msg, &mut stdout)?;
+        if let Err(_) = tx.send(msg) {
+            return Ok::<_, anyhow::Error>(());
+        }
     }
 
+    jh.join().expect("stdout thread error");
     Ok(())
 }
 
