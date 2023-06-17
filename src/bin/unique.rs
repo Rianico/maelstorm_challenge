@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use anyhow::Context;
-use rustgen::main_loop;
+use rustgen::{main_loop, Message};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,7 +22,10 @@ struct UniqueNode {
 }
 
 impl rustgen::Node<Generation> for UniqueNode {
-    fn init_from(init_msg: &rustgen::InitBody) -> anyhow::Result<Self>
+    fn init_from(
+        init_msg: &rustgen::InitBody,
+        _: std::sync::mpsc::Sender<Message<Generation>>,
+    ) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

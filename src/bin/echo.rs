@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use anyhow::Context;
-use rustgen::main_loop;
+use rustgen::{main_loop, Message};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,7 +18,10 @@ struct EchoNode {
 }
 
 impl rustgen::Node<EchoMessage> for EchoNode {
-    fn init_from(_: &rustgen::InitBody) -> anyhow::Result<Self>
+    fn init_from(
+        _: &rustgen::InitBody,
+        _: std::sync::mpsc::Sender<Message<EchoMessage>>,
+    ) -> anyhow::Result<Self>
     where
         Self: Sized,
     {

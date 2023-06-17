@@ -75,7 +75,10 @@ pub struct InitBody {
 }
 
 pub trait Node<MessageType> {
-    fn init_from(init: &InitBody) -> anyhow::Result<Self>
+    fn init_from(
+        init: &InitBody,
+        tx: std::sync::mpsc::Sender<Message<MessageType>>,
+    ) -> anyhow::Result<Self>
     where
         Self: Sized;
 
@@ -105,7 +108,7 @@ where
 
     let (tx, rx) = mpsc::channel();
 
-    let mut node: N = Node::init_from(init_body)
+    let mut node: N = Node::init_from(init_body, tx.clone())
         .context("construct node from init message failed")
         .expect("Fail to construct the node from init msg");
 

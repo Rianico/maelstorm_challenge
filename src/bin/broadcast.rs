@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::Context;
-use rustgen::main_loop;
+use rustgen::{main_loop, Message};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,7 +33,10 @@ struct BroadcastNode {
 }
 
 impl rustgen::Node<BroadcastMessage> for BroadcastNode {
-    fn init_from(init_msg: &rustgen::InitBody) -> anyhow::Result<Self>
+    fn init_from(
+        init_msg: &rustgen::InitBody,
+        _: std::sync::mpsc::Sender<Message<BroadcastMessage>>,
+    ) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
