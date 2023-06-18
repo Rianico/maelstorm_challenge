@@ -1,4 +1,4 @@
-[Gossip Glomers](https://fly.io/static/images/gossipers.webp)
+![Gossip Glomers](https://fly.io/static/images/gossipers.webp)
 
 # maelstorm_challenge
 
