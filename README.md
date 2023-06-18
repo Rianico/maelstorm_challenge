@@ -1,3 +1,5 @@
+[Gossip Glomers](https://fly.io/static/images/gossipers.webp)
+
 # maelstorm_challenge
 
 learn through [maelstorm](https://fly.io/dist-sys/).

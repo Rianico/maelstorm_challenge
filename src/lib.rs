@@ -165,7 +165,8 @@ mod test {
 
     #[test]
     fn serde_from_str() -> anyhow::Result<()> {
-        let content = r#"{"src":"c1","dest":"n1","body":{"type":"init","node_id":"n1","node_ids":["n1","n2"],"msg_id":1,"in_reply_to":1}}"#;
+        let content = r#"""{"src":"c1","dest":"n1",
+        "body":{"type":"init","node_id":"n1","node_ids":["n1","n2"],"msg_id":1,"in_reply_to":1}}"""#;
         let msg: Message<InitMsg> = serde_json::from_str(content)?;
         println!("{msg:?}");
         Ok(())
