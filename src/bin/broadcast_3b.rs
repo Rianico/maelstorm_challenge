@@ -5,6 +5,7 @@ use std::{
 };
 
 use anyhow::Context;
+use rand::Rng;
 use rustgen::{main_loop, Body, Message};
 use serde::{Deserialize, Serialize};
 
@@ -51,19 +52,20 @@ impl BroadcastNode {
     ) -> anyhow::Result<()> {
         match external {
             ExternalMessage::GossipInform => {
+                let mut rnd = rand::thread_rng();
+                // todo use parallel stream to speed up
                 for neighbor in &self.neightbors {
-                    let known_msg = self
-                        .known
-                        .get(neighbor)
-                        .with_context(|| format!("can't find the neighbor {}", neighbor))
-                        .expect("get known message failed");
-                    let messages: HashSet<usize> = self
+                    let known_msg = &self.known[neighbor];
+                    let (known, mut unknown): (HashSet<usize>, HashSet<usize>) = self
                         .messages
                         .iter()
-                        .filter(|msg| !known_msg.contains(msg))
-                        .copied()
-                        .collect();
-                    eprintln!("{} / {}", messages.len(), self.messages.len());
+                        .partition(|msg| known_msg.contains(msg));
+                    let additional_cap = unknown.len().min(3236 * known.len() / 10000) as u32;
+                    unknown.extend(
+                        known
+                            .iter()
+                            .filter(|_| rnd.gen_ratio(additional_cap, known.len() as u32)),
+                    );
                     Message {
                         src: self.id.clone(),
                         dst: neighbor.clone(),
@@ -71,11 +73,11 @@ impl BroadcastNode {
                             id: Default::default(),
                             in_reply_to: Default::default(),
                             payload: BroadcastMessage::External(ExternalMessage::Gossip {
-                                messages,
+                                messages: unknown,
                             }),
                         },
                     }
-                    .send(&mut *output)
+                    .send(output)
                     .with_context(|| format!("send gossip to {}", neighbor))?
                 }
                 Ok(())
@@ -86,7 +88,7 @@ impl BroadcastNode {
                     .with_context(|| format!("can't find the neighbor {}", req.src))
                     .expect("update known message failed")
                     .extend(messages);
-                self.messages.extend(messages);
+                self.messages.extend(messages.iter().copied());
                 Ok(())
             }
         }
@@ -103,7 +105,7 @@ impl rustgen::Node<BroadcastMessage> for BroadcastNode {
     {
         // create a thread to send gossip notification in period
         std::thread::spawn(move || loop {
-            std::thread::sleep(Duration::from_millis(200));
+            std::thread::sleep(Duration::from_millis(100));
             let _ = tx.send(Message {
                 src: Default::default(),
                 dst: Default::default(),
@@ -141,10 +143,16 @@ impl rustgen::Node<BroadcastMessage> for BroadcastNode {
             }
             BroadcastMessage::Read => {
                 let mut reply = req.into_reply(Some(&mut self.msg_id));
+                let mut tmp_messages = HashSet::with_capacity(0);
+                std::mem::swap(&mut self.messages, &mut tmp_messages);
                 reply.body.payload = BroadcastMessage::ReadOk {
-                    messages: self.messages.clone(),
+                    messages: tmp_messages,
                 };
-                reply.send(output)?
+                reply.send(output)?;
+                let BroadcastMessage::ReadOk { mut messages } = reply.body.payload else {
+                    unreachable!()
+                };
+                std::mem::swap(&mut self.messages, &mut messages);
             }
             BroadcastMessage::Topology { ref mut topology } => {
                 self.neightbors = topology
