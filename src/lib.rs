@@ -14,6 +14,15 @@ pub struct Message<MessageType> {
     pub body: Body<MessageType>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Body<MessageType> {
+    #[serde(rename = "msg_id")]
+    pub id: Option<usize>,
+    pub in_reply_to: Option<usize>,
+    #[serde(flatten)]
+    pub payload: MessageType,
+}
+
 impl<M: Serialize> Message<M> {
     pub fn into_reply(self, msg_id: Option<&mut usize>) -> Self {
         Self {
@@ -39,20 +48,17 @@ impl<M: Serialize> Message<M> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Body<MessageType> {
-    #[serde(rename = "msg_id")]
-    pub id: Option<usize>,
-    pub in_reply_to: Option<usize>,
-    #[serde(flatten)]
-    pub payload: MessageType,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
 pub enum InitMsg {
     Init(InitBody),
     InitOk,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InitBody {
+    pub node_id: String,
+    pub node_ids: Vec<String>,
 }
 
 impl Message<InitMsg> {
@@ -70,12 +76,6 @@ impl Message<InitMsg> {
             InitMsg::InitOk => anyhow::bail!("can't convert from init_ok messag"),
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InitBody {
-    pub node_id: String,
-    pub node_ids: Vec<String>,
 }
 
 pub trait Node<MessageType> {
