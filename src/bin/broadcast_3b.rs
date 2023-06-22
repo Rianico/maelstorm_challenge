@@ -26,12 +26,12 @@ pub enum BroadcastMessage {
     },
     TopologyOk,
 
-    External(ExternalMessage),
+    Extended(GossipProtocol),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ExternalMessage {
-    GossipInform,
+pub enum GossipProtocol {
+    GossipAlert,
     Gossip { messages: HashSet<usize> },
 }
 
@@ -48,10 +48,10 @@ impl BroadcastNode {
         &mut self,
         req: &rustgen::Message<BroadcastMessage>,
         output: &mut impl Write,
-        external: &ExternalMessage,
+        external: &GossipProtocol,
     ) -> anyhow::Result<()> {
         match external {
-            ExternalMessage::GossipInform => {
+            GossipProtocol::GossipAlert => {
                 let mut rnd = rand::thread_rng();
                 // todo use parallel stream to speed up
                 for neighbor in &self.neightbors {
@@ -72,7 +72,7 @@ impl BroadcastNode {
                         body: Body {
                             id: Default::default(),
                             in_reply_to: Default::default(),
-                            payload: BroadcastMessage::External(ExternalMessage::Gossip {
+                            payload: BroadcastMessage::Extended(GossipProtocol::Gossip {
                                 messages: unknown,
                             }),
                         },
@@ -82,7 +82,7 @@ impl BroadcastNode {
                 }
                 Ok(())
             }
-            ExternalMessage::Gossip { messages } => {
+            GossipProtocol::Gossip { messages } => {
                 self.known
                     .get_mut(&req.src)
                     .with_context(|| format!("can't find the neighbor {}", req.src))
@@ -112,7 +112,7 @@ impl rustgen::Node<BroadcastMessage> for BroadcastNode {
                 body: Body {
                     id: None,
                     in_reply_to: None,
-                    payload: BroadcastMessage::External(ExternalMessage::GossipInform),
+                    payload: BroadcastMessage::Extended(GossipProtocol::GossipAlert),
                 },
             });
         });
@@ -165,7 +165,7 @@ impl rustgen::Node<BroadcastMessage> for BroadcastNode {
             BroadcastMessage::TopologyOk
             | BroadcastMessage::BroadcastOk
             | BroadcastMessage::ReadOk { .. } => {}
-            BroadcastMessage::External(ref external) => {
+            BroadcastMessage::Extended(ref external) => {
                 self.handle_external(&req, output, &external)?
             }
         }
@@ -185,11 +185,11 @@ mod test {
     use rustgen::{Body, Message};
     use serde::Serialize;
 
-    use crate::{BroadcastMessage, ExternalMessage};
+    use crate::{BroadcastMessage, GossipProtocol};
 
     #[test]
     fn test_echo_node_msg() -> anyhow::Result<()> {
-        let ext = BroadcastMessage::External(ExternalMessage::Gossip {
+        let ext = BroadcastMessage::Extended(GossipProtocol::Gossip {
             messages: HashSet::default(),
         });
         let msg = Message {
